@@ -91,30 +91,37 @@
 
                 float3 viewDir = normalize(i.rePos - _WorldSpaceCameraPos.xyz); // _WorldSpaceCameraPos … ワールド座標系のカメラの位置
 
+                viewDir = float3(0.0, -1.0, 0.0);
+
+                float length_y = 1.0 / viewDir.y; // 1.0 … 水面から水底までの距離
+                viewDir = viewDir * length_y;
+                float3 water_under_pos = i.rePos + viewDir;
+
+                float3 water_cam_pos = float3(water_under_pos.x, 8.50, water_under_pos.z);
+                float3 re_viewDir = normalize( water_cam_pos - water_under_pos);
+                float re_length_y = 1.0 / re_viewDir.y;
+                re_viewDir = re_viewDir * re_length_y;
+                float3 water_on_pos = water_under_pos + re_viewDir;
+
+                float2 screenUv = float2(water_on_pos.x/10+0.50, water_on_pos.z/10.0+0.50);
+                // screenUv.y = 1.0 - screenUv.y;
+
+                /*
                 float3 refractDir = refract(viewDir, normal, 1.0 / _RefractionIndex);
-
                 float3 refractPos = i.worldPos + refractDir * _Shift;
-
                 float4 refractScreenPos = mul(UNITY_MATRIX_VP, float4(refractPos, 1.0));
-
                 float4 refractDir4 = float4(refractDir,0.0);
-
-                float2 screenUv = (refractScreenPos.xy / refractScreenPos.w) * 0.5 + 0.5;
-                
-#if UNITY_UV_STARTS_AT_TOP
-                screenUv.y = 1.0 - screenUv.y;
-#endif
-
+                float2 screenUv = (refractScreenPos.xy / refractScreenPos.w) * 0.5 + 0.5
                 float3 refractCol = tex2D(_GrabTexture, screenUv).xyz;
-
                 fixed4 col = float4(refractCol,1.0);
-
                 col = tex2D(_GrabTexture, i.worldPos);
+                */
 
                 i.uv.x = i.uv.x;
                 i.uv.y = i.uv.y;
 
-                col = tex2D(_MainTex, screenUv);
+                fixed4 col = tex2D(_MainTex, screenUv);
+                // col = tex2D(_MainTex, i.uv);
 
                 // return col;
 
@@ -122,10 +129,7 @@
 
                 col *= _Color;
 
-                // return col;
-
-
-                return float4(refractCol, 1.0);
+                return col;
 
                 ///
 
