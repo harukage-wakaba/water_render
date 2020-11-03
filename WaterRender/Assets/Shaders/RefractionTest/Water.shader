@@ -3,9 +3,10 @@
     Properties
     {
         _MainTex ("RenderTexture", 2D) = "white" {}
+        _GroundTex("GroundTexture", 2D) = "white" {}
         _Color("Main Color", Color) = (1,1,1,1)
         _SpecularColor("Specular Color", Color) = (1, 1, 1)
-        _Shift("Shift", Range(-100.0, 100.0)) = 0
+        _Shift("Shift", Range(-1.0, 1.0)) = 0
     }
     SubShader
     {
@@ -51,6 +52,7 @@
             };
 
             sampler2D _MainTex;
+            sampler2D _GroundTex;
             fixed4 _Color;
             float4 _MainTex_ST;
 
@@ -90,20 +92,36 @@
                 float3 normal = normalize(i.normal);
 
                 float3 viewDir = normalize(i.rePos - _WorldSpaceCameraPos.xyz); // _WorldSpaceCameraPos … ワールド座標系のカメラの位置
+                float3 tmp = i.rePos / 10.0 + 0.50;
 
-                viewDir = float3(0.0, -1.0, 0.0);
-
-                float length_y = 1.0 / viewDir.y; // 1.0 … 水面から水底までの距離
+                float length_y = abs( 1.0 / viewDir.y); // 1.0 … 水面から水底までの距離
                 viewDir = viewDir * length_y;
                 float3 water_under_pos = i.rePos + viewDir;
 
-                float3 water_cam_pos = float3(water_under_pos.x, 8.50, water_under_pos.z);
+
+                if ( water_under_pos.x >= 5.0 ||
+                    water_under_pos.x <= -5.0 ||
+                    water_under_pos.z >= 5.0 || 
+                    water_under_pos.z <= -5.0 )
+                {
+                    return float4(0.0,0.0,0.0,1.0);
+                }
+
+                tmp = water_under_pos;
+
+                float3 water_cam_pos = float3(0.0, 8.50, 0.0);
                 float3 re_viewDir = normalize( water_cam_pos - water_under_pos);
                 float re_length_y = 1.0 / re_viewDir.y;
                 re_viewDir = re_viewDir * re_length_y;
                 float3 water_on_pos = water_under_pos + re_viewDir;
 
-                float2 screenUv = float2(water_on_pos.x/10+0.50, water_on_pos.z/10.0+0.50);
+                float4 refractScreenPos = mul(UNITY_MATRIX_VP, float4(water_on_pos, _Shift));
+
+                // float2 screenUv = (refractScreenPos.xy / refractScreenPos.w) * 0.5 + 0.5;
+
+                // 10.0 … 床の広さ    16.0 … 床(Ground)や壁(Wall_0X)のテクスチャはTilingの設定でそれぞれ16を設定している
+                float2 screenUv = float2((water_under_pos.x/10.0*16.0)+0.50, (water_under_pos.z/10 * 16.0)+0.50);
+
                 // screenUv.y = 1.0 - screenUv.y;
 
                 /*
@@ -120,7 +138,8 @@
                 i.uv.x = i.uv.x;
                 i.uv.y = i.uv.y;
 
-                fixed4 col = tex2D(_MainTex, screenUv);
+                fixed4 col = tex2D(_GroundTex, screenUv);
+
                 // col = tex2D(_MainTex, i.uv);
 
                 // return col;
@@ -128,6 +147,8 @@
                 // col = tex2Dproj(_GrabTexture, i.worldPos - refractDir4*0.25);
 
                 col *= _Color;
+
+                // col = float4(tmp, 1.0);
 
                 return col;
 

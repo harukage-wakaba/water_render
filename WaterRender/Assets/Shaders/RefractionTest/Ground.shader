@@ -4,6 +4,10 @@
     {
         _MainTex ("Texture", 2D) = "white" {}
         _Color("Main Color", Color) = (1,1,1,1)
+        _CamMtx1("Cam Mtx1", Vector) = (0,0,0,0)
+        _CamMtx2("Cam Mtx2", Vector) = (0,0,0,0)
+        _CamMtx3("Cam Mtx3", Vector) = (0,0,0,0)
+        _CamMtx4("Cam Mtx4", Vector) = (0,0,0,0)
     }
     SubShader
     {
@@ -35,6 +39,10 @@
 
             sampler2D _MainTex;
             fixed4 _Color;
+            float4 _CamMtx1;
+            float4 _CamMtx2;
+            float4 _CamMtx3;
+            float4 _CamMtx4;
             float4 _MainTex_ST;
 
             v2f vert (appdata v)
@@ -48,6 +56,13 @@
 
             fixed4 frag (v2f i) : SV_Target
             {
+                 float4x4 CamMtx = UNITY_MATRIX_VP;
+
+                 _CamMtx1 = CamMtx[0];
+                 _CamMtx2 = CamMtx[1];
+                 _CamMtx3 = CamMtx[2];
+                 _CamMtx4 = CamMtx[3];
+
                 // sample the texture
                 fixed4 col = tex2D(_MainTex, i.uv);
                 // apply fog
