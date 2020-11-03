@@ -4,6 +4,7 @@
     {
         _MainTex ("RenderTexture", 2D) = "white" {}
         _GroundTex("GroundTexture", 2D) = "white" {}
+        _WallTex("WallTexture", 2D) = "white" {}
         _Color("Main Color", Color) = (1,1,1,1)
         _SpecularColor("Specular Color", Color) = (1, 1, 1)
         _Shift("Shift", Range(-1.0, 1.0)) = 0
@@ -53,6 +54,7 @@
 
             sampler2D _MainTex;
             sampler2D _GroundTex;
+            sampler2D _WallTex;
             fixed4 _Color;
             float4 _MainTex_ST;
 
@@ -95,17 +97,66 @@
                 float3 tmp = i.rePos / 10.0 + 0.50;
 
                 float length_y = abs( 1.0 / viewDir.y); // 1.0 … 水面から水底までの距離
-                viewDir = viewDir * length_y;
-                float3 water_under_pos = i.rePos + viewDir;
+                float3 u_viewDir = viewDir * length_y;
+                float3 water_under_pos = i.rePos + u_viewDir;
 
+                float2 screenUv = float2(0.0,0.0);
 
-                if ( water_under_pos.x >= 5.0 ||
-                    water_under_pos.x <= -5.0 ||
-                    water_under_pos.z >= 5.0 || 
-                    water_under_pos.z <= -5.0 )
+                if (// water_under_pos.x >= 5.0 ||
+                    // water_under_pos.x <= -5.0 ||
+                    // water_under_pos.z >= 5.0 ||
+                    water_under_pos.z <= -5.0)
                 {
-                    return float4(0.0,0.0,0.0,1.0);
+                    return float4(0.0, 0.0, 0.0, 1.0);
                 }
+
+                if ( water_under_pos.x <= -5.0 )
+                {
+                    float distance_l = abs(-5.0-i.rePos.x);
+                    float length_l = abs(distance_l / viewDir.x);
+                    float3 l_viewDir = viewDir * length_l;
+                    float3 water_left_pos = i.rePos + l_viewDir;
+
+                    water_left_pos.y = water_left_pos.y * -1.0;
+
+                    screenUv = float2((water_left_pos.y / 10.0 + 0.40)*16.0, (water_left_pos.z / 10.0 + 0.50)*16.0);
+
+                    fixed4 col = tex2D(_WallTex, screenUv);
+                    col *= _Color;
+                    return col;
+                }
+
+                if (water_under_pos.x >= 5.0)
+                {
+                    float distance_l = abs(5.0 - i.rePos.x);
+                    float length_l = abs(distance_l / viewDir.x);
+                    float3 l_viewDir = viewDir * length_l;
+                    float3 water_left_pos = i.rePos + l_viewDir;
+
+                    water_left_pos.y = water_left_pos.y * -1.0;
+
+                    screenUv = float2((water_left_pos.y / 10.0 + 0.40)*16.0, 1.0-(water_left_pos.z / 10.0 + 0.50)*16.0);
+
+                    fixed4 col = tex2D(_WallTex, screenUv);
+                    col *= _Color;
+                    return col;
+                }
+
+                if (water_under_pos.z >= 5.0)
+                {
+                    float distance_l = abs(5.0 - i.rePos.z);
+                    float length_l = abs(distance_l / viewDir.z);
+                    float3 l_viewDir = viewDir * length_l;
+                    float3 water_left_pos = i.rePos + l_viewDir;
+
+                    screenUv = float2((water_left_pos.x / 10.0 )*16.0,1.0-(water_left_pos.y / 10.0 + 0.50)*16.0 + 0.40);
+
+                    fixed4 col = tex2D(_WallTex, screenUv);
+                    col *= _Color;
+                    return col;
+                }
+
+                
 
                 tmp = water_under_pos;
 
@@ -120,7 +171,7 @@
                 // float2 screenUv = (refractScreenPos.xy / refractScreenPos.w) * 0.5 + 0.5;
 
                 // 10.0 … 床の広さ    16.0 … 床(Ground)や壁(Wall_0X)のテクスチャはTilingの設定でそれぞれ16を設定している
-                float2 screenUv = float2((water_under_pos.x/10.0*16.0)+0.50, (water_under_pos.z/10 * 16.0)+0.50);
+                screenUv = float2((water_under_pos.x/10.0*16.0)+0.50, (water_under_pos.z/10 * 16.0)+0.50);
 
                 // screenUv.y = 1.0 - screenUv.y;
 
