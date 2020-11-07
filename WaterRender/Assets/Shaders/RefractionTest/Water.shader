@@ -95,20 +95,18 @@
 
                 float3 viewDir = normalize(i.rePos - _WorldSpaceCameraPos.xyz); // _WorldSpaceCameraPos … ワールド座標系のカメラの位置
                 float3 tmp = i.rePos / 10.0 + 0.50;
-
-                float length_y = abs( 1.0 / viewDir.y); // 1.0 … 水面から水底までの距離
+                float distance_u = abs(-1.0 -i.rePos.y); // -1.0 … 水底のy座標
+                float length_y = abs(distance_u / viewDir.y); // distance_u … 水面から水底までの距離
                 float3 u_viewDir = viewDir * length_y;
                 float3 water_under_pos = i.rePos + u_viewDir;
 
                 float2 screenUv = float2(0.0,0.0);
 
-                if (// water_under_pos.x >= 5.0 ||
-                    // water_under_pos.x <= -5.0 ||
-                    // water_under_pos.z >= 5.0 ||
-                    water_under_pos.z <= -5.0)
-                {
-                    return float4(0.0, 0.0, 0.0, 1.0);
-                }
+                float2 border_left_up = float2(1.0,1.0);
+                float2 border_right_up = float2(-1.0, 1.0);
+
+                float2 border_left_down = float2(1.0, -1.0);
+                float2 border_right_down = float2(-1.0, -1.0);
 
                 if ( water_under_pos.x <= -5.0 )
                 {
@@ -117,32 +115,43 @@
                     float3 l_viewDir = viewDir * length_l;
                     float3 water_left_pos = i.rePos + l_viewDir;
 
-                    water_left_pos.y = water_left_pos.y * -1.0;
+                    float2 water_left_pos_v2 = float2(water_left_pos.x, water_left_pos.z);
 
-                    screenUv = float2((water_left_pos.y / 10.0 + 0.40)*16.0, (water_left_pos.z / 10.0 + 0.50)*16.0);
+                    if( dot(border_left_up, water_left_pos_v2) < 0.0 && dot(border_left_down, water_left_pos_v2) < 0.0 )
+                    {
 
-                    fixed4 col = tex2D(_WallTex, screenUv);
-                    col *= _Color;
-                    return col;
+                        water_left_pos.y = water_left_pos.y * -1.0;
+
+                        screenUv = float2((water_left_pos.y / 10.0 + 0.40)*16.0, (water_left_pos.z / 10.0 + 0.50)*16.0);
+
+                        fixed4 col = tex2D(_WallTex, screenUv);
+                        col *= _Color;
+                        return col;
+                    }
                 }
 
-                if (water_under_pos.x >= 5.0)
+                if (water_under_pos.x >= 5.0 )
                 {
                     float distance_l = abs(5.0 - i.rePos.x);
                     float length_l = abs(distance_l / viewDir.x);
                     float3 l_viewDir = viewDir * length_l;
                     float3 water_left_pos = i.rePos + l_viewDir;
 
-                    water_left_pos.y = water_left_pos.y * -1.0;
+                    float2 water_left_pos_v2 = float2(water_left_pos.x, water_left_pos.z);
 
-                    screenUv = float2((water_left_pos.y / 10.0 + 0.40)*16.0, 1.0-(water_left_pos.z / 10.0 + 0.50)*16.0);
+                    if (dot(border_right_up, water_left_pos_v2) < 0.0 && dot(border_right_down, water_left_pos_v2) < 0.0)
+                    {
+                        water_left_pos.y = water_left_pos.y * -1.0;
 
-                    fixed4 col = tex2D(_WallTex, screenUv);
-                    col *= _Color;
-                    return col;
+                        screenUv = float2((water_left_pos.y / 10.0 + 0.40)*16.0, 1.0-(water_left_pos.z / 10.0 + 0.50)*16.0);
+
+                        fixed4 col = tex2D(_WallTex, screenUv);
+                        col *= _Color;
+                        return col;
+                    }
                 }
 
-                if (water_under_pos.z >= 5.0)
+                if (water_under_pos.z >= 5.0 )
                 {
                     float distance_l = abs(5.0 - i.rePos.z);
                     float length_l = abs(distance_l / viewDir.z);
@@ -156,6 +165,19 @@
                     return col;
                 }
 
+                if (water_under_pos.z <= -5.0)
+                {
+                    float distance_l = abs(-5.0 - i.rePos.z);
+                    float length_l = abs(distance_l / viewDir.z);
+                    float3 l_viewDir = viewDir * length_l;
+                    float3 water_left_pos = i.rePos + l_viewDir;
+
+                    screenUv = float2(1.0-(water_left_pos.x / 10.0)*16.0, 1.0 - (water_left_pos.y / 10.0 + 0.50)*16.0 + 0.40);
+
+                    fixed4 col = tex2D(_WallTex, screenUv);
+                    col *= _Color;
+                    return col;
+                }
                 
 
                 tmp = water_under_pos;
