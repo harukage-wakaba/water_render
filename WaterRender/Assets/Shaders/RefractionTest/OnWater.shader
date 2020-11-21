@@ -1,4 +1,4 @@
-﻿Shader "Custom/Water"
+﻿Shader "Custom/OnWater"
 {
     Properties
     {
@@ -88,13 +88,13 @@
 
                 o.pos = UnityObjectToClipPos(pos);
 
-                // o.pos = UnityObjectToClipPos(v.pos);
+                o.pos = UnityObjectToClipPos(v.pos);
 
                 o.worldPos = ComputeGrabScreenPos(o.pos);
 
                 o.rePos = mul(unity_ObjectToWorld, v.pos).xyz;
 
-                // o.normal = UnityObjectToWorldNormal(v.normal);
+                o.normal = UnityObjectToWorldNormal(v.normal);
 
                 o.uv = TRANSFORM_TEX(v.uv,_MainTex);
 
@@ -106,7 +106,26 @@
                 r0 = r0 * r0;
                 return r0 + (1 - r0) * pow(1 - cosine, 5);
             }
+            fixed4 frag(v2f i) : SV_Target
+            {
+                float3 normal = normalize(i.normal);
+                float3 viewDir = normalize(i.rePos - _WorldSpaceCameraPos.xyz); // _WorldSpaceCameraPos … ワールド座標系のカメラの位置
+                
+                i.uv = i.uv * 0.5;
+                i.uv += 0.25;
 
+                fixed4 sky_col = tex2D(_MainTex, i.uv);
+                sky_col.a = 1.0 - (-viewDir.y);
+                sky_col.a *= 0.75;
+
+                // sky_col.a = 1.0;
+                fixed4 col = sky_col;
+
+                return col;
+            }
+
+            /*
+            
             fixed4 frag (v2f i) : SV_Target
             {
                 _RefractionIndex = 1.33;
@@ -221,17 +240,6 @@
 
                 // screenUv.y = 1.0 - screenUv.y;
 
-                /*
-                float3 refractDir = refract(viewDir, normal, 1.0 / _RefractionIndex);
-                float3 refractPos = i.worldPos + refractDir * _Shift;
-                float4 refractScreenPos = mul(UNITY_MATRIX_VP, float4(refractPos, 1.0));
-                float4 refractDir4 = float4(refractDir,0.0);
-                float2 screenUv = (refractScreenPos.xy / refractScreenPos.w) * 0.5 + 0.5
-                float3 refractCol = tex2D(_GrabTexture, screenUv).xyz;
-                fixed4 col = float4(refractCol,1.0);
-                col = tex2D(_GrabTexture, i.worldPos);
-                */
-
                 i.uv.x = i.uv.x;
                 i.uv.y = i.uv.y;
 
@@ -243,7 +251,7 @@
 
                 // col = tex2Dproj(_GrabTexture, i.worldPos - refractDir4*0.25);
 
-                // col *= _Color;
+                col *= _Color;
 
                 // col = float4(tmp, 1.0);
 
@@ -260,6 +268,9 @@
 
                 ///
             }
+
+            */
+
             ENDCG
         }
     }
