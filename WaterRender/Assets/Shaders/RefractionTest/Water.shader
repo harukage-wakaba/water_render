@@ -243,7 +243,6 @@
 
                 // col = tex2Dproj(_GrabTexture, i.worldPos - refractDir4*0.25);
 
-                // col *= _Color;
 
                 // col = float4(tmp, 1.0);
 

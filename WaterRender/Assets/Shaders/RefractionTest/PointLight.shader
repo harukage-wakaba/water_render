@@ -19,32 +19,52 @@
             #pragma fragment frag
 
             #include "UnityCG.cginc"
+            #include "Lighting.cginc"
 
             struct appdata
             {
                 float4 vertex : POSITION;
                 float3 normal : NORMAL;
+                float3 tangent: TANGENT;
             };
 
             struct v2f
             {                
                 float4 pos : SV_POSITION;
                 float3 normal : TEXCOORD0;
-
                 float3 rePos : TEXCOORD1;
             };
 
             fixed4 _Color;
 
+            float3 modify(float3 pos)
+            {
+                return float3(pos.x, (pos.y + sin(pos.x * 8.0 + _Time.x * 300.0) * cos(pos.z * 8.0 + _Time.x * 30.0))*0.10, pos.z);
+            }
+
             v2f vert (appdata v)
             {
                 v2f o;
 
-                o.pos = UnityObjectToClipPos(v.vertex);
+
+                float3 pos = modify(v.vertex);
+                float3 tangent = v.tangent;
+                float3 binormal = normalize(cross(v.normal, tangent));
+
+                float delta = 0.05;
+                float3 posT = modify(v.vertex + tangent * delta);
+                float3 posB = modify(v.vertex + binormal * delta);
+
+                float3 modifiedTangent = posT - pos;
+                float3 modifiedBinormal = posB - pos;
+
+                o.normal = normalize(cross(modifiedTangent, modifiedBinormal));
+                o.pos = UnityObjectToClipPos(pos);
+
+                // o.pos = UnityObjectToClipPos(v.vertex);
+                // o.normal = UnityObjectToWorldNormal(v.normal);
 
                 o.rePos = mul(unity_ObjectToWorld, v.vertex).xyz;
-
-                o.normal = UnityObjectToWorldNormal(v.normal);
 
                 return o;
             }
@@ -66,10 +86,16 @@
                 float  colA;
 
                 float3 viewDir = normalize(i.rePos - _WorldSpaceCameraPos.xyz); // _WorldSpaceCameraPos … ワールド座標系のカメラの位置
+
+                viewDir = refract(viewDir, normal, 1.0 / 1.0);
+
                 viewDir.y = -viewDir.y;
+
                 float length_y = abs( Light.y / viewDir.y);
+                // float length_y = Light.y;
                 float3 check_pos = viewDir * length_y;
-                check_pos.y = i.rePos.y;
+
+                // check_pos.y = i.rePos.y;
 
                 //点光源の方向
                 dir = Light.xyz - (i.rePos + check_pos);
@@ -81,7 +107,7 @@
                 dir = dir / len;
 
                 //拡散
-                colD = saturate(dot(normalize(normal), dir));
+                colD = saturate(dot(normalize(normal), normalize(Light.xyz - i.rePos)));
 
                 //減衰
                 // colA = saturate(1.0f / (Attenuation.x + Attenuation.y * len + Attenuation.z * len * len));
