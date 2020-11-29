@@ -90,7 +90,7 @@
                 // o.pos = UnityObjectToClipPos(v.vertex);
                 // o.normal = UnityObjectToWorldNormal(v.normal);
 
-                o.rePos = mul(unity_ObjectToWorld, v.vertex).xyz;
+                o.rePos = mul(unity_ObjectToWorld, pos).xyz;
 
                 return o;
             }
@@ -103,7 +103,7 @@
                 //--------------------------------------
                 // ライトの設定(決め打ち)
 
-                float4 Light = float4(0.0,1.0,0.0,1.0);
+                float4 Light = float4(8.0,16.0,8.0,1.0);
                 float4 Attenuation = float4(0.020f, 0.020f, 0.020f, 1.0f);
 
                 float3 dir;
@@ -113,7 +113,7 @@
 
                 float3 viewDir = normalize(i.rePos - _WorldSpaceCameraPos.xyz); // _WorldSpaceCameraPos … ワールド座標系のカメラの位置
 
-                viewDir = refract(viewDir, normal, 1.0 / 1.0);
+                viewDir = refract(viewDir, normal, 1.0 / 1.330);
 
                 viewDir.y = -viewDir.y;
 
@@ -151,7 +151,7 @@
 
                 // col = _Color;
 
-                // col = float4((i.rePos.z / 10.0) + 0.5,0.0,0.0, 1.0);
+                // col = float4(normal.xyz, 1.0);
 
                 return col;
             }
