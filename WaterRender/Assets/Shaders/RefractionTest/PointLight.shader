@@ -18,6 +18,8 @@
             #pragma vertex vert
             #pragma fragment frag
 
+            // #pragma target 5.0
+
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
 
@@ -37,9 +39,33 @@
 
             fixed4 _Color;
 
+            fixed2 random2(fixed2 st) {
+                st = fixed2(dot(st, fixed2(127.1, 311.7)),
+                    dot(st, fixed2(269.5, 183.3)));
+                return -1.0 + 2.0*frac(sin(st)*43758.5453123);
+            }
+
+            float perlinNoise(fixed2 st)
+            {
+                fixed2 p = floor(st);
+                fixed2 f = frac(st);
+                fixed2 u = f * f*(3.0 - 2.0*f);
+
+                float v00 = random2(p + fixed2(0, 0));
+                float v10 = random2(p + fixed2(1, 0));
+                float v01 = random2(p + fixed2(0, 1));
+                float v11 = random2(p + fixed2(1, 1));
+
+                return lerp(lerp(dot(v00, f - fixed2(0, 0)), dot(v10, f - fixed2(1, 0)), u.x),
+                    lerp(dot(v01, f - fixed2(0, 1)), dot(v11, f - fixed2(1, 1)), u.x),
+                    u.y) + 0.5f;
+            }
+
             float3 modify(float3 pos)
             {
-                return float3(pos.x, (pos.y + sin(pos.x * 8.0 + _Time.x * 300.0) * cos(pos.z * 8.0 + _Time.x * 30.0))*0.10, pos.z);
+                float noise_y = perlinNoise(fixed2((pos.x + _Time.x*50.0) / 2.0, (pos.z + _Time.x*50.0) / 2.0));
+                return float3(pos.x, noise_y*0.10, pos.z);
+                // return float3(pos.x,( pos.y + sin(pos.x * 8.0 + _Time.x * 15.0) * cos(pos.z * 8.0 + _Time.x * 15.0))*0.020, pos.z);
             }
 
             v2f vert (appdata v)
