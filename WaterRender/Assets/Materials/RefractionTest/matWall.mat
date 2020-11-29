@@ -73,5 +73,9 @@ Material:
     - _UVSec: 0
     - _ZWrite: 1
     m_Colors:
+    - _CamMtx1: {r: 0, g: 0, b: 0, a: 0}
+    - _CamMtx2: {r: 0, g: 0, b: 0, a: 0}
+    - _CamMtx3: {r: 0, g: 0, b: 0, a: 0}
+    - _CamMtx4: {r: 0, g: 0, b: 0, a: 0}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
