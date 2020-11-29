@@ -9,6 +9,7 @@ UnityGenerated/
 *.stackdump
 AssetBundles/
 AssetBundlesIOS/
+WinData/
 
 # Unity3D generated meta files
 *.pidb.meta
