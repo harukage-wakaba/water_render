@@ -138,7 +138,7 @@
 
                 o.worldPos = ComputeGrabScreenPos(o.pos);
 
-                o.rePos = mul(unity_ObjectToWorld, v.pos).xyz;
+                o.rePos = mul(unity_ObjectToWorld, pos).xyz;
 
                 // o.normal = UnityObjectToWorldNormal(v.normal);
 
