@@ -114,13 +114,14 @@
 
                 o.pos = UnityObjectToClipPos(pos);
 
-                // o.pos = UnityObjectToClipPos(v.pos);
+                // o.pos = UnityObjectToClipPos(v.pos); // 
 
                 o.worldPos = ComputeGrabScreenPos(o.pos);
 
                 o.rePos = mul(unity_ObjectToWorld, pos).xyz;
 
-                // o.normal = UnityObjectToWorldNormal(v.normal);
+                // o.rePos = mul(unity_ObjectToWorld, v.pos).xyz; // 
+                // o.normal = UnityObjectToWorldNormal(v.normal); // 
 
                 o.uv = TRANSFORM_TEX(v.uv,_MainTex);
 
@@ -247,45 +248,44 @@
                 // 10.0 … 床の広さ    16.0 … 床(Ground)や壁(Wall_0X)のテクスチャはTilingの設定でそれぞれ16を設定している
                 screenUv = float2((water_under_pos.x/10.0*16.0)+0.50, (water_under_pos.z/10 * 16.0)+0.50);
 
-                // screenUv.y = 1.0 - screenUv.y;
-
-                /*
-                float3 refractDir = refract(viewDir, normal, 1.0 / _RefractionIndex);
-                float3 refractPos = i.worldPos + refractDir * _Shift;
-                float4 refractScreenPos = mul(UNITY_MATRIX_VP, float4(refractPos, 1.0));
-                float4 refractDir4 = float4(refractDir,0.0);
-                float2 screenUv = (refractScreenPos.xy / refractScreenPos.w) * 0.5 + 0.5
-                float3 refractCol = tex2D(_GrabTexture, screenUv).xyz;
-                fixed4 col = float4(refractCol,1.0);
-                col = tex2D(_GrabTexture, i.worldPos);
-                */
-
                 i.uv.x = i.uv.x;
                 i.uv.y = i.uv.y;
 
                 fixed4 col = tex2D(_GroundTex, screenUv);
                 col *= _Color;
 
+                //----------------------------------------------------
+                // コースティクス
+
+                float3 flatPos = i.rePos;
+                // flatPos.y = 0.0; // 平面の時の水の高さは0.0
+
+                float3 flat_normal = float3(0.0,1.0,0.0);
+
+                float3 flat_viewDir = normalize(flatPos - _WorldSpaceCameraPos.xyz); // _WorldSpaceCameraPos … ワールド座標系のカメラの位置
+                flat_viewDir = refract(flat_viewDir, flat_normal, 1.0 / _RefractionIndex);
+
+                float flat_distance_u = abs(_Distance - flatPos.y); // -1.0 … 水底のy座標
+                float flat_length_y = abs(flat_distance_u / flat_viewDir.y); // distance_u … 水面から水底までの距離
+                float3 flat_u_viewDir = flat_viewDir * flat_length_y;
+                float3 flat_water_under_pos = flatPos + flat_u_viewDir;
+
+                float beforeArea = length(ddx(flat_water_under_pos)) * length(ddy(flat_water_under_pos));
+                float afterArea = length(ddx(water_under_pos)) * length(ddy(water_under_pos));
+                float caustics_rate = max(beforeArea / afterArea,0.750);
+                caustics_rate *= 1.20;
+
                 // col = tex2D(_MainTex, i.uv);
-
                 // return col;
-
                 // col = tex2Dproj(_GrabTexture, i.worldPos - refractDir4*0.25);
-
                 // col = float4(tmp, 1.0);
+                // col = float4(caustics_rate*0.2, 0.0, 0.0, 1.0);
+
+                // col = float4(caustics_rate, 0.0,0.0,1.0f);
+
+                col *= float4(caustics_rate, caustics_rate, caustics_rate, 1.0f);
 
                 return col;
-
-                ///
-
-                // sample the texture
-                // fixed4 col = tex2D(_GrabTexture, i.worldPos);
-                // apply fog
-                // UNITY_APPLY_FOG(i.fogCoord, col);
-                // col = _Color;
-                // return col;
-
-                ///
             }
             ENDCG
         }
