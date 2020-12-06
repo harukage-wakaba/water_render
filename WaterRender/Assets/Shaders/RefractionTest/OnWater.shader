@@ -65,6 +65,52 @@
             float3 _SpecularColor;
             float _Shift;
 
+
+            /////////////////////////////////
+
+            // lx, ly, lz : レイの始点
+            // vx, vy, vz : レイの方向ベクトル
+            // px, py, pz : 球の中心点の座標
+            // r : 球の半径
+            // q1x, q1y, q1z: 衝突開始点（戻り値）
+            // q2x, q2y, q2z: 衝突終了点（戻り値）
+
+            float3 calcRaySphere(float3 start_pos, float3 ray, float3 sphere_pos, float radius, float3 hit_pos_01)
+            {
+                hit_pos_01 = float3(0.0, 0.0, 0.0);
+
+                sphere_pos.x = sphere_pos.x - start_pos.x;
+                sphere_pos.y = sphere_pos.y - start_pos.y;
+                sphere_pos.z = sphere_pos.z - start_pos.z;
+
+                float A = ray.x * ray.x + ray.y * ray.y + ray.z * ray.z;
+                float B = ray.x * sphere_pos.x + ray.y * sphere_pos.y + ray.z * sphere_pos.z;
+                float C = sphere_pos.x * sphere_pos.x + sphere_pos.y * sphere_pos.y + sphere_pos.z * sphere_pos.z - radius * radius;
+
+                if (A == 0.0f)
+                    return hit_pos_01; // レイの長さが0
+
+                float s = B * B - A * C;
+                if (s < 0.0f)
+                    return hit_pos_01; // 衝突していない
+
+                s = sqrt(s);
+
+                float a1 = (B - s) / A;
+                float a2 = (B + s) / A;
+
+                if (a1 < 0.0f || a2 < 0.0f)
+                    return hit_pos_01; // レイの反対で衝突
+
+                hit_pos_01.x = start_pos.x + a1 * ray.x;
+                hit_pos_01.y = start_pos.y + a1 * ray.y;
+                hit_pos_01.z = start_pos.z + a1 * ray.z;
+
+                return hit_pos_01;
+            }
+
+            /////////////////////////////////
+
             float3 modify(float3 pos)
             {
                 return float3(pos.x,( pos.y + sin(pos.x * 8.0 + _Time.x * 15.0) * cos(pos.z * 8.0 + _Time.x * 15.0))*0.020, pos.z);
@@ -88,13 +134,13 @@
 
                 o.pos = UnityObjectToClipPos(pos);
 
-                o.pos = UnityObjectToClipPos(v.pos);
+                // o.pos = UnityObjectToClipPos(v.pos);
 
                 o.worldPos = ComputeGrabScreenPos(o.pos);
 
                 o.rePos = mul(unity_ObjectToWorld, v.pos).xyz;
 
-                o.normal = UnityObjectToWorldNormal(v.normal);
+                // o.normal = UnityObjectToWorldNormal(v.normal);
 
                 o.uv = TRANSFORM_TEX(v.uv,_MainTex);
 
@@ -111,8 +157,24 @@
                 float3 normal = normalize(i.normal);
                 float3 viewDir = normalize(i.rePos - _WorldSpaceCameraPos.xyz); // _WorldSpaceCameraPos … ワールド座標系のカメラの位置
                 
-                i.uv = i.uv * 0.5;
-                i.uv += 0.25;
+                // i.uv = i.uv * 0.5;
+                // i.uv += 0.25;
+
+                /* ex
+
+                Vector3 re_start_pos = _start_pos.transform.position + ( _start_pos.transform.up * SPHERE_RADIUS * 2.0f );
+                Vector3 re_ray = (_start_pos.transform.position - re_start_pos).normalized;
+                bool is_hit = calcRaySphere(re_start_pos,re_ray,Vector3.zero,SPHERE_RADIUS,out hit_pos_01,out hit_pos_02);
+
+                */
+
+                const float SPHERE_RADIUS = 5.0 * 1.3750;
+                float3 re_start_pos = i.rePos + (normal * SPHERE_RADIUS * 2.0f);
+                float3 re_ray = normalize(i.rePos - re_start_pos);
+                float3 hit_pos = calcRaySphere(re_start_pos, re_ray,float3(0,0,0), SPHERE_RADIUS, float3(0, 0, 0));
+
+                i.uv.x = (hit_pos.x/SPHERE_RADIUS)*0.50+0.50;
+                i.uv.y = -(hit_pos.z/SPHERE_RADIUS)*0.50+0.50;
 
                 fixed4 sky_col = tex2D(_MainTex, i.uv);
                 sky_col.a = 1.0 - (-viewDir.y);
