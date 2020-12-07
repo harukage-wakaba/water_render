@@ -91,8 +91,9 @@
 
             float3 modify(float3 pos)
             {
-                float noise_y = perlinNoise(fixed2((pos.x + _Time.x*50.0) / 2.0, (pos.z + _Time.x*50.0) / 2.0));
-                return float3(pos.x, noise_y*0.10, pos.z);
+                float rate = 0.20;
+                float noise_y = perlinNoise(fixed2((pos.x + _Time.x*10.0) / rate, (pos.z + _Time.x*10.0) / rate));
+                return float3(pos.x, noise_y*0.0450, pos.z);
                 // return float3(pos.x,( pos.y + sin(pos.x * 8.0 + _Time.x * 15.0) * cos(pos.z * 8.0 + _Time.x * 15.0))*0.020, pos.z);
             }
 
@@ -258,7 +259,7 @@
                 // コースティクス
 
                 float3 flatPos = i.rePos;
-                // flatPos.y = 0.0; // 平面の時の水の高さは0.0
+                flatPos.y = 0.0; // 平面の時の水の高さは0.0
 
                 float3 flat_normal = float3(0.0,1.0,0.0);
 
@@ -272,8 +273,10 @@
 
                 float beforeArea = length(ddx(flat_water_under_pos)) * length(ddy(flat_water_under_pos));
                 float afterArea = length(ddx(water_under_pos)) * length(ddy(water_under_pos));
-                float caustics_rate = max(beforeArea / afterArea,0.750);
-                caustics_rate *= 1.20;
+
+                float caustics_rate = max(beforeArea / afterArea,0.90);
+
+                caustics_rate *= 0.90;
 
                 // col = tex2D(_MainTex, i.uv);
                 // return col;
@@ -282,6 +285,10 @@
                 // col = float4(caustics_rate*0.2, 0.0, 0.0, 1.0);
 
                 // col = float4(caustics_rate, 0.0,0.0,1.0f);
+
+                caustics_rate = 0.960 + i.rePos.y*2.80;
+
+                // caustics_rate = 0.250 + ( normal.y * ( 2.0 - length_y ) );
 
                 col *= float4(caustics_rate, caustics_rate, caustics_rate, 1.0f);
 
