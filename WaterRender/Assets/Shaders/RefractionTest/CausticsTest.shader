@@ -1,4 +1,4 @@
-﻿Shader "Custom/Water"
+﻿Shader "Custom/CausticsTest"
 {
     Properties
     {
@@ -117,14 +117,14 @@
 
                 o.pos = UnityObjectToClipPos(pos);
 
-                // o.pos = UnityObjectToClipPos(v.pos); // 
+                o.pos = UnityObjectToClipPos(v.pos); // 
 
                 // o.worldPos = ComputeGrabScreenPos(o.pos);
 
                 o.rePos = mul(unity_ObjectToWorld, pos).xyz;
 
-                // o.rePos = mul(unity_ObjectToWorld, v.pos).xyz; // 
-                // o.normal = UnityObjectToWorldNormal(v.normal); // 
+                o.rePos = mul(unity_ObjectToWorld, v.pos).xyz; // 
+                o.normal = UnityObjectToWorldNormal(v.normal); // 
 
                 o.uv = TRANSFORM_TEX(v.uv,_MainTex);
 
@@ -143,10 +143,12 @@
             // normal … 水面の法線
             float3 getUnderPos(float3 pos,float normal)
             {
-                float refractionIndex = 1.33;
+                float refractionIndex = 1.330;
                 float distance = -1.0;// -1.0 … 水底のy座標
 
-                float3 re_right_pos = float3(pos.x, pos.y + 1.0, pos.z);
+                // float3 re_right_pos = float3(pos.x, pos.y + 1.0, pos.z);
+                float3 re_right_pos = float3(0.0, pos.y + 1.0, 0.0);
+
                 float3 re_viewDir = normalize(pos - re_right_pos); // _WorldSpaceCameraPos … ワールド座標系のカメラの位置
                 re_viewDir = refract(re_viewDir, normal, 1.0 / refractionIndex);
                 float re_distance_u = abs(distance - pos.y); // -1.0 … 水底のy座標
@@ -220,7 +222,7 @@
 
                         fixed4 col = tex2D(_WallTex, screenUv);
                         col *= _Color;
-                        return col;
+                        // return col;
                     }
                 }
 
@@ -241,7 +243,7 @@
 
                         fixed4 col = tex2D(_WallTex, screenUv);
                         col *= _Color;
-                        return col;
+                        // return col;
                     }
                 }
 
@@ -256,7 +258,7 @@
 
                     fixed4 col = tex2D(_WallTex, screenUv);
                     col *= _Color;
-                    return col;
+                    // return col;
                 }
 
                 if (water_under_pos.z <= -5.0)
@@ -270,7 +272,7 @@
 
                     fixed4 col = tex2D(_WallTex, screenUv);
                     col *= _Color;
-                    return col;
+                    // return col;
                 }
                 
 
@@ -289,7 +291,8 @@
                 i.uv.y = i.uv.y;
 
                 fixed4 col = tex2D(_GroundTex, screenUv);
-                col *= _Color;
+
+                col = _Color;
 
                 //----------------------------------------------------
                 // コースティクス
@@ -325,24 +328,26 @@
                 // 変形後の横隣の水面
                 float3 wave_ddx_pos = wave_pos + ddx(wave_pos) * micro_rate;
                 // float3 wave_ddx_pos = float3(wave_pos.x + micro, wave_pos.y, wave_pos.z);
-                float3 wave_ddx_normal = getNoiseNormal(wave_ddx_pos, i.tangent);
-                float3 wave_ddx_under_pos = getUnderPos(wave_ddx_pos, wave_ddx_normal);
+                float3 wave_ddx_flat_pos = float3(wave_ddx_pos.x, 0.0,wave_ddx_pos.z);
+                float3 wave_ddx_normal = getNoiseNormal(wave_ddx_flat_pos, i.tangent);
+                float3 wave_ddx_under_pos = getUnderPos(wave_ddx_pos, wave_normal);
 
                 // 変形後の縦隣の水面
                 float3 wave_ddy_pos = wave_pos + ddy(wave_pos) * micro_rate;
                 // float3 wave_ddy_pos = float3(wave_pos.x, wave_pos.y, wave_pos.z + micro);
-                float3 wave_ddy_normal = getNoiseNormal(wave_ddy_pos,i.tangent);
-                float3 wave_ddy_under_pos = getUnderPos(wave_ddy_pos, wave_ddy_normal);
+                float3 wave_ddy_flat_pos = float3(wave_ddy_pos.x, 0.0, wave_ddy_pos.z);
+                float3 wave_ddy_normal = getNoiseNormal(wave_ddy_flat_pos,i.tangent);
+                float3 wave_ddy_under_pos = getUnderPos(wave_ddy_pos, wave_normal);
 
                 // 変形後の隣接ピクセルとの面積
                 float wave_area = length(wave_ddx_under_pos - wave_under_pos) * length(wave_ddy_under_pos - wave_under_pos);
 
                 // 面積の差
                 float caustics_rate = max( flat_area / wave_area, 0.010 );
+                
+                caustics_rate *= 0.50;
 
-                caustics_rate *= 0.260;
-
-                caustics_rate = caustics_rate + 1.20;
+                // caustics_rate = caustics_rate + 1.0;
 
                 // caustics_rate = caustics_rate * 0.80;
 
@@ -407,11 +412,13 @@
 
                 c = caustics_rate * 1.0;
 
+                // c = i.rePos.y * 10.0;
+
                 // if (normal.y < 0.99990)
 
-                // col = float4(c,c,c,1.0f);
+                col = float4(c,0.0,0.0,1.0f);
 
-                // col *= float4(c,c,c,1.0f);
+                // col = float4(c,c,c,0.0f);
 
                 return col;
             }

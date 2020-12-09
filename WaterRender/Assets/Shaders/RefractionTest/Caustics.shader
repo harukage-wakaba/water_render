@@ -1,4 +1,4 @@
-﻿Shader "Custom/Water"
+﻿Shader "Custom/Caustics"
 {
     Properties
     {
@@ -15,7 +15,8 @@
         LOD 100
 
         ZWrite Off
-        Blend SrcAlpha OneMinusSrcAlpha
+        Blend Zero SrcColor // 加算合成
+        // Blend SrcAlpha OneMinusSrcAlpha
 
         GrabPass
         {
@@ -66,7 +67,8 @@
             float3 _SpecularColor;
             float _Shift;
 
-            
+            static const float PI = 3.14159265f;
+            static const float DEG2RAD = PI / 180.f;
 
             fixed2 random2(fixed2 st) {
                 st = fixed2(dot(st, fixed2(127.1, 311.7)),
@@ -93,8 +95,10 @@
             float3 modify(float3 pos)
             {
                 float rate = 0.20;
+
                 float noise_y = perlinNoise(fixed2((pos.x + _Time.x*5.0) / rate, (pos.z + _Time.x*5.0) / rate));
-                return float3(pos.x, noise_y*0.060, pos.z);
+
+                return float3(pos.x,noise_y*0.060, pos.z);
                 // return float3(pos.x,( pos.y + sin(pos.x * 8.0 + _Time.x * 15.0) * cos(pos.z * 8.0 + _Time.x * 15.0))*0.020, pos.z);
             }
 
@@ -143,10 +147,11 @@
             // normal … 水面の法線
             float3 getUnderPos(float3 pos,float normal)
             {
-                float refractionIndex = 1.33;
+                float refractionIndex = 1.330;
                 float distance = -1.0;// -1.0 … 水底のy座標
 
                 float3 re_right_pos = float3(pos.x, pos.y + 1.0, pos.z);
+
                 float3 re_viewDir = normalize(pos - re_right_pos); // _WorldSpaceCameraPos … ワールド座標系のカメラの位置
                 re_viewDir = refract(re_viewDir, normal, 1.0 / refractionIndex);
                 float re_distance_u = abs(distance - pos.y); // -1.0 … 水底のy座標
@@ -220,7 +225,7 @@
 
                         fixed4 col = tex2D(_WallTex, screenUv);
                         col *= _Color;
-                        return col;
+                        // return col;
                     }
                 }
 
@@ -241,7 +246,7 @@
 
                         fixed4 col = tex2D(_WallTex, screenUv);
                         col *= _Color;
-                        return col;
+                        // return col;
                     }
                 }
 
@@ -256,7 +261,7 @@
 
                     fixed4 col = tex2D(_WallTex, screenUv);
                     col *= _Color;
-                    return col;
+                    // return col;
                 }
 
                 if (water_under_pos.z <= -5.0)
@@ -270,7 +275,7 @@
 
                     fixed4 col = tex2D(_WallTex, screenUv);
                     col *= _Color;
-                    return col;
+                    // return col;
                 }
                 
 
@@ -289,7 +294,8 @@
                 i.uv.y = i.uv.y;
 
                 fixed4 col = tex2D(_GroundTex, screenUv);
-                col *= _Color;
+
+                col = _Color;
 
                 //----------------------------------------------------
                 // コースティクス
@@ -325,13 +331,15 @@
                 // 変形後の横隣の水面
                 float3 wave_ddx_pos = wave_pos + ddx(wave_pos) * micro_rate;
                 // float3 wave_ddx_pos = float3(wave_pos.x + micro, wave_pos.y, wave_pos.z);
-                float3 wave_ddx_normal = getNoiseNormal(wave_ddx_pos, i.tangent);
+                float3 wave_ddx_flat_pos = float3(wave_ddx_pos.x, 0.0,wave_ddx_pos.z);
+                float3 wave_ddx_normal = getNoiseNormal(wave_ddx_flat_pos, i.tangent);
                 float3 wave_ddx_under_pos = getUnderPos(wave_ddx_pos, wave_ddx_normal);
 
                 // 変形後の縦隣の水面
                 float3 wave_ddy_pos = wave_pos + ddy(wave_pos) * micro_rate;
                 // float3 wave_ddy_pos = float3(wave_pos.x, wave_pos.y, wave_pos.z + micro);
-                float3 wave_ddy_normal = getNoiseNormal(wave_ddy_pos,i.tangent);
+                float3 wave_ddy_flat_pos = float3(wave_ddy_pos.x, 0.0, wave_ddy_pos.z);
+                float3 wave_ddy_normal = getNoiseNormal(wave_ddy_flat_pos,i.tangent);
                 float3 wave_ddy_under_pos = getUnderPos(wave_ddy_pos, wave_ddy_normal);
 
                 // 変形後の隣接ピクセルとの面積
@@ -339,79 +347,93 @@
 
                 // 面積の差
                 float caustics_rate = max( flat_area / wave_area, 0.010 );
-
-                caustics_rate *= 0.260;
-
-                caustics_rate = caustics_rate + 1.20;
-
-                // caustics_rate = caustics_rate * 0.80;
-
-                /*
                 
-                _Distance = -0.010;
-
-                float3 flatPos = i.rePos;
-                flatPos.y = 0.0; // 平面の時の水の高さは0.0
-                float3 flat_normal = float3(0.0,1.0,0.0);
-                float3 right_pos = float3(flatPos.x, flatPos.y+1.0, flatPos.z);
-                float3 flat_viewDir = normalize(flatPos - right_pos); // _WorldSpaceCameraPos … ワールド座標系のカメラの位置
-                flat_viewDir = refract(flat_viewDir, flat_normal, 1.0 / _RefractionIndex);
-                float flat_distance_u = abs(_Distance - flatPos.y); // -1.0 … 水底のy座標
-                float flat_length_y = abs(flat_distance_u / flat_viewDir.y); // distance_u … 水面から水底までの距離
-                float3 flat_u_viewDir = flat_viewDir * flat_length_y;
-                float3 flat_water_under_pos = flatPos + flat_u_viewDir;
-
-                // i.rePos = flatPos;
-                // normal = flat_normal;
-                float3 re_right_pos = float3(i.rePos.x, i.rePos.y + 1.0, i.rePos.z);
-                float3 re_viewDir = normalize(i.rePos - re_right_pos); // _WorldSpaceCameraPos … ワールド座標系のカメラの位置
-                re_viewDir = refract(re_viewDir, normal, 1.0 / _RefractionIndex);
-                float re_distance_u = abs(_Distance - i.rePos.y); // -1.0 … 水底のy座標
-                float re_length_y = abs(re_distance_u / re_viewDir.y); // distance_u … 水面から水底までの距離
-                float3 re_u_viewDir = re_viewDir * re_length_y;
-                float3 re_water_under_pos = i.rePos + re_u_viewDir;
-
-                
-                // 10.0 … 床の広さ    16.0 … 床(Ground)や壁(Wall_0X)のテクスチャはTilingの設定でそれぞれ16を設定している
-                float2 re_screenUv = float2((re_water_under_pos.x / 10.0*1.0) + 0.50, (re_water_under_pos.z / 10 * 1.0) + 0.50);
-                float2 flat_screenUv = float2((flat_water_under_pos.x / 10.0*1.0) + 0.50, (flat_water_under_pos.z / 10 * 1.0) + 0.50);
-
-                float length_rate = 1.0;
-
-                float beforeArea = length(ddx(flat_water_under_pos))*length_rate * length(ddy(flat_water_under_pos))*length_rate;
-                float afterArea = length(ddx(re_water_under_pos))*length_rate * length(ddy(re_water_under_pos))*length_rate;
-
-                float caustics_rate = max(beforeArea / afterArea,0.90);
-
                 caustics_rate *= 0.20;
 
-                */
-
-                // col = tex2D(_MainTex, i.uv);
-                // return col;
-                // col = tex2Dproj(_GrabTexture, i.worldPos - refractDir4*0.25);
-                // col = float4(tmp, 1.0);
-                // col = float4(caustics_rate*0.2, 0.0, 0.0, 1.0);
-
-                // col = float4(caustics_rate, 0.0,0.0,1.0f);
-
-                // caustics_rate = 0.960 + i.rePos.y*2.80;
-
-                // caustics_rate = 0.250 + ( normal.y * ( 2.0 - length_y ) );
-
-                // col *= float4(caustics_rate, caustics_rate, caustics_rate, 1.0f);
+                caustics_rate = caustics_rate + 1.0;
 
                 float c = (flat_area * wave_area * 1000000.0) * 0.20 + 0.80;
 
-                // c = max(c,0.48);
-
                 c = caustics_rate * 1.0;
 
-                // if (normal.y < 0.99990)
+                c = max(c, 1.150);
 
-                // col = float4(c,c,c,1.0f);
+                //----------------------------------------------------
+                // コースティクス改
 
-                // col *= float4(c,c,c,1.0f);
+                // 輝度蓄積値
+                float luminance = 0.0;
+
+                // 係数
+                float luminance_rate = 0.0040;
+
+                // 水平時の水面のY座標
+                float OnWaterPosY = 0.0;
+
+                // X開始角度
+                float check_strat_deg_x = 45.0;
+
+                // Z開始角度
+                float check_strat_deg_z = 0.0;
+
+                // 角度オフセット
+                float check_offset_deg = 5.0;
+
+                // 角度オフセットZ
+                float check_offset_deg_z = 10.0;
+
+                // 水底の法線ベクトル
+                float3 under_pos_normal = float3(0, 1, 0);
+
+                float tan = i.tangent;
+
+                for( int z = 0; z < 18; z++ )
+                {
+                    for ( int x = 0; x < 18; x++ )
+                    {
+                        float check_deg = check_strat_deg_x + ( x * check_offset_deg );
+
+                        float check_deg_z = check_strat_deg_z + (z * check_offset_deg_z);
+
+                        // チェックする法線の方向
+                        float3 check_normal = normalize( float3(cos(check_deg*DEG2RAD), sin(check_deg*DEG2RAD), sin(check_deg_z*DEG2RAD)) );
+
+                        // 水底から水面までの距離
+                        float to_wave_on_distance = abs(OnWaterPosY - water_under_pos.y);
+
+                        float to_wave_on_length = abs( to_wave_on_distance / check_normal.y );
+
+                        // 描画ピクセルの真上にある水面の法線を取得
+                        float3 wave_on_pos = water_under_pos + (check_normal*to_wave_on_length);
+
+                        // 描画ピクセルの真上にある水面の法線を取得
+                        float3 wave_on_normal = getNoiseNormal(wave_on_pos,tan);
+                
+                        // 輝度を計算し、蓄積する： 水上の法線・チェック法線 * 水底の法線 ・チェック法線 * 輝度係数
+                        luminance += dot(wave_on_normal, check_normal) * dot(under_pos_normal,check_normal) * luminance_rate;
+                    }
+                }
+
+                // luminance -= 0.70;
+                // luminance *= 8.0;
+
+                luminance -= 0.720;
+
+                // luminance = max(luminance,0.0);
+
+                luminance *= 82.0;
+
+                luminance = max(luminance, 1.20);
+                luminance = min(luminance,1.80);
+
+                // luminance += 1.0;
+
+                // c -= 0.99;
+                // c *= 1000.0;
+
+                //----------------------------------------------------
+
+                col = float4(luminance, luminance, luminance, 1.0f);
 
                 return col;
             }

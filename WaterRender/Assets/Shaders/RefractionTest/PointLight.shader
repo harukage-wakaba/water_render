@@ -64,8 +64,8 @@
             float3 modify(float3 pos)
             {
                 float rate = 0.20;
-                float noise_y = perlinNoise(fixed2((pos.x + _Time.x*10.0) / rate, (pos.z + _Time.x*10.0) / rate));
-                return float3(pos.x, noise_y*0.0450, pos.z);
+                float noise_y = perlinNoise(fixed2((pos.x + _Time.x*5.0) / rate, (pos.z + _Time.x*5.0) / rate));
+                return float3(pos.x, noise_y*0.060, pos.z);
                 // return float3(pos.x,( pos.y + sin(pos.x * 8.0 + _Time.x * 15.0) * cos(pos.z * 8.0 + _Time.x * 15.0))*0.020, pos.z);
             }
 

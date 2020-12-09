@@ -1,0 +1,24 @@
+# Created by Metasequoia
+
+mtllib water_plane_04.mtl
+
+v -5.000000 0.000000 -5.000000
+v 5.000000 0.000000 -5.000000
+v -5.000000 0.000000 5.000000
+v 5.000000 0.000000 5.000000
+# 4 vertices
+
+vt 0.00000 1.00000
+vt 1.00000 1.00000
+vt 1.00000 0.00000
+vt 0.00000 0.00000
+# 4 texture vertices
+
+vn 0.00000 1.00000 0.00000
+# 1 normal vertices
+
+g obj1
+usemtl mat1
+f 3/4/1 4/3/1 2/2/1 1/1/1
+# 1 elements
+
