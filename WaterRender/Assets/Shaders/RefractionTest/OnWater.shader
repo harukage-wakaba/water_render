@@ -209,6 +209,8 @@
 
                 sky_col.a = min(sky_col.a+0.180,1.0);
 
+                sky_col.a = max(sky_col.a, 0.780);
+
                 fixed4 col = sky_col;
 
                 return col;

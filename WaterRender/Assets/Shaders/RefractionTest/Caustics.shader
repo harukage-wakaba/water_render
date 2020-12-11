@@ -17,6 +17,7 @@
         ZWrite Off
         Blend Zero SrcColor // 加算合成
         // Blend SrcAlpha OneMinusSrcAlpha
+        Lighting Off
 
         GrabPass
         {
@@ -297,6 +298,8 @@
 
                 col = _Color;
 
+                /*
+
                 //----------------------------------------------------
                 // コースティクス
 
@@ -358,6 +361,8 @@
 
                 c = max(c, 1.150);
 
+                */
+
                 //----------------------------------------------------
                 // コースティクス改
 
@@ -365,13 +370,14 @@
                 float luminance = 0.0;
 
                 // 係数
-                float luminance_rate = 0.0040;
+                // float luminance_rate = 0.0040;
+                float luminance_rate = 0.0020;
 
                 // 水平時の水面のY座標
                 float OnWaterPosY = 0.0;
 
                 // X開始角度
-                float check_strat_deg_x = 45.0;
+                float check_strat_deg_x = 46.0;
 
                 // Z開始角度
                 float check_strat_deg_z = 0.0;
@@ -383,48 +389,69 @@
                 float check_offset_deg_z = 10.0;
 
                 // 水底の法線ベクトル
-                float3 under_pos_normal = float3(0, 1, 0);
+                float3 under_pos_normal = float3(0, 1.0, 0);
+
+                // 仮想光源の方向ベクトル
+                float3 virtual_light_normal = float3(0, -1.0, 0);
 
                 float tan = i.tangent;
 
-                for( int z = 0; z < 18; z++ )
+                for( int z = 0; z < 36; z++ )
                 {
-                    for ( int x = 0; x < 18; x++ )
+                    for ( int x = 0; x < 9; x++ )
                     {
                         float check_deg = check_strat_deg_x + ( x * check_offset_deg );
 
-                        float check_deg_z = check_strat_deg_z + (z * check_offset_deg_z);
+                        // float check_deg_z = check_strat_deg_z + (z * check_offset_deg_z);
 
                         // チェックする法線の方向
-                        float3 check_normal = normalize( float3(cos(check_deg*DEG2RAD), sin(check_deg*DEG2RAD), sin(check_deg_z*DEG2RAD)) );
+                        float3 check_normal = normalize( float3(cos(check_deg*DEG2RAD), sin(check_deg*DEG2RAD),0.0) );
 
                         // 水底から水面までの距離
                         float to_wave_on_distance = abs(OnWaterPosY - water_under_pos.y);
 
                         float to_wave_on_length = abs( to_wave_on_distance / check_normal.y );
 
+                        // XYチェックpos
+                        float3 check_pos_xy = check_normal * to_wave_on_length;
+
+                        // Z反映
+                        float x_length = abs(check_pos_xy.x);
+                        float z_deg = z * check_offset_deg_z;
+                        float3 check_pos_xyz = float3(cos(z_deg*DEG2RAD)*x_length, check_pos_xy.y,sin(z_deg*DEG2RAD)*x_length);
+
+                        check_normal = normalize(check_pos_xyz);
+
                         // 描画ピクセルの真上にある水面の法線を取得
-                        float3 wave_on_pos = water_under_pos + (check_normal*to_wave_on_length);
+                        float3 wave_on_pos = water_under_pos + check_pos_xyz;
 
                         // 描画ピクセルの真上にある水面の法線を取得
                         float3 wave_on_normal = getNoiseNormal(wave_on_pos,tan);
-                
+                        
+                        // 屈折適応
+                        float3 re_wave_on_normal = refract(virtual_light_normal, wave_on_normal, 1.0 / _RefractionIndex);
+
+                        float distance = to_wave_on_distance / to_wave_on_length;
+
                         // 輝度を計算し、蓄積する： 水上の法線・チェック法線 * 水底の法線 ・チェック法線 * 輝度係数
-                        luminance += dot(wave_on_normal, check_normal) * dot(under_pos_normal,check_normal) * luminance_rate;
+                        luminance += (dot(re_wave_on_normal,-check_normal)*distance) * (dot(under_pos_normal,check_normal)*distance) * luminance_rate;
                     }
                 }
 
-                // luminance -= 0.70;
-                // luminance *= 8.0;
+                luminance = max(luminance-0.431,0.0);
+                luminance = min(luminance*1024.0, 3.80);
 
-                luminance -= 0.720;
+                luminance += 0.50;
 
-                // luminance = max(luminance,0.0);
+                luminance = min(luminance, 2.80);
 
-                luminance *= 82.0;
+                // luminance -= 0.886;
 
-                luminance = max(luminance, 1.20);
-                luminance = min(luminance,1.80);
+                // luminance -= 1.0;
+                // luminance *= 1.0;
+
+                // luminance = max(luminance, 1.20);
+                // luminance = min(luminance,1.80);
 
                 // luminance += 1.0;
 
