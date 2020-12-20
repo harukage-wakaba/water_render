@@ -460,7 +460,9 @@
 
                 //----------------------------------------------------
 
-                col = float4(luminance, luminance, luminance, 1.0f);
+                luminance = min(luminance,1.250);
+
+                col = float4(luminance, luminance, luminance, 0.0f);
 
                 return col;
             }

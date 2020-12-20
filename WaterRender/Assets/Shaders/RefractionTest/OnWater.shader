@@ -207,9 +207,9 @@
                 // sky_col.a *= 0.90;
                 // sky_col.a = 1.0;
 
-                sky_col.a = min(sky_col.a+0.180,1.0);
+                sky_col.a = min(sky_col.a+0.180,0.40);
 
-                sky_col.a = max(sky_col.a, 0.780);
+                sky_col.a = max(sky_col.a, 0.30);
 
                 fixed4 col = sky_col;
 
