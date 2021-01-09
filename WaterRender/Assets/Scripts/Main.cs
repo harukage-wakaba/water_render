@@ -9,7 +9,7 @@ public class Main : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        Screen.SetResolution(800,600,Screen.fullScreen);
+        Screen.SetResolution(768,768,Screen.fullScreen);
         _main_camera = this.GetComponent<Camera>();
     }
 

@@ -79,11 +79,10 @@ public class RipplesTextureTest : MonoBehaviour
 
         // Graphics.SetRenderTarget(null);
         Graphics.SetRenderTarget(rt_list[_front_id]);
-        GL.Clear(false /* clearDepth */,true /* clearColor */,new Color(0.5f,0.5f,0.5f,0.5f));
+        GL.Clear(false,true ,new Color(0.5f,0.5f,0.5f,0.5f));
         Graphics.Blit(rt_list[prev_id],rt_list[_front_id],_mat_ripples);
 
         _front_id = prevprev_id;
-
         
     }
 }

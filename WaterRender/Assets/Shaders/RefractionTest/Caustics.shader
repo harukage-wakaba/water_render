@@ -488,8 +488,8 @@
                 luminance = min(luminance,2.0);
                 luminance = max(luminance-1.476, 0.0);
                 luminance = min(luminance*560, 1.90);
-                luminance = min(luminance+0.21, 1.70);
-                luminance = max(luminance, 0.90);
+                luminance = min(luminance+0.22, 1.70);
+                luminance = max(luminance, 0.960);
 
                 // luminance = max(luminance - 0.426, 0.0010);
                 // luminance = min(luminance*512.0, 3.80);
