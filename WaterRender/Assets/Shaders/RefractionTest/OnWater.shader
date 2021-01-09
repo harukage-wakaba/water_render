@@ -141,17 +141,40 @@
                 // return float3(pos.x,( pos.y + sin(pos.x * 8.0 + _Time.x * 15.0) * cos(pos.z * 8.0 + _Time.x * 15.0))*0.020, pos.z);
             }
 
+            float3 ripples(float3 pos, float2 texcoord_xy)
+            {
+                float height_rate = 0.05;
+
+                float d = (tex2Dlod(_MainTex, float4(texcoord_xy, 0, 0)).r) * height_rate;
+                float height_y = min(pos.y + d, 0.010);
+                return float3(pos.x, height_y, pos.z);
+            }
+
+            float2 getAdjUV(float3 v_pos)
+            {
+                // 水面の広さ
+                float water_width = 10.0f; // x:-5 ~ +5
+                float water_height = 10.0f; // y:-5 ~ +5
+                float2 adj_uv = float2((v_pos.x + (water_width*0.5)) / water_width, (v_pos.z + (water_height*0.5)) / water_height);
+                return adj_uv;
+            }
+
             v2f vert (appdata v)
             {
                 v2f o;
                 
-                float3 pos = modify(v.pos);
+                // float3 pos = modify(v.pos);
+                float3 pos = ripples(v.pos, getAdjUV(v.pos));
+
                 float3 tangent = v.tangent;
                 float3 binormal = normalize(cross(v.normal, tangent));
 
-                float delta = 0.05;
-                float3 posT = modify(v.pos + tangent * delta);
-                float3 posB = modify(v.pos + binormal * delta);
+                float delta = 0.00390625 * 2.0;
+                // float3 posT = modify(v.pos + tangent * delta);
+                float3 posT = ripples(v.pos + tangent * delta, getAdjUV(v.pos) + float2(delta, 0.0));
+
+                // float3 posB = modify(v.pos + binormal * delta);
+                float3 posB = ripples(v.pos + binormal * delta, getAdjUV(v.pos) + float2(0.0, delta));
 
                 float3 modifiedTangent = posT - pos;
                 float3 modifiedBinormal = posB - pos;
@@ -181,17 +204,6 @@
             {
                 float3 normal = normalize(i.normal);
                 float3 viewDir = normalize(i.rePos - _WorldSpaceCameraPos.xyz); // _WorldSpaceCameraPos … ワールド座標系のカメラの位置
-                
-                // i.uv = i.uv * 0.5;
-                // i.uv += 0.25;
-
-                /* ex
-
-                Vector3 re_start_pos = _start_pos.transform.position + ( _start_pos.transform.up * SPHERE_RADIUS * 2.0f );
-                Vector3 re_ray = (_start_pos.transform.position - re_start_pos).normalized;
-                bool is_hit = calcRaySphere(re_start_pos,re_ray,Vector3.zero,SPHERE_RADIUS,out hit_pos_01,out hit_pos_02);
-
-                */
 
                 const float SPHERE_RADIUS = 5.0 * 1.3750;
                 float3 re_start_pos = i.rePos + (normal * SPHERE_RADIUS * 2.0f);
@@ -201,167 +213,17 @@
                 i.uv.x = (hit_pos.x/SPHERE_RADIUS)*0.50+0.50;
                 i.uv.y = -(hit_pos.z/SPHERE_RADIUS)*0.50+0.50;
 
-                fixed4 sky_col = tex2D(_MainTex, i.uv);
+                fixed4 sky_col = tex2D(_GroundTex, i.uv);
                 sky_col.a = 1.0 - (-viewDir.y);
 
-                // sky_col.a *= 0.90;
-                // sky_col.a = 1.0;
+                sky_col.a = min(sky_col.a+0.180,0.420);
 
-                sky_col.a = min(sky_col.a+0.180,0.40);
-
-                sky_col.a = max(sky_col.a, 0.30);
+                sky_col.a = max(sky_col.a, 0.280);
 
                 fixed4 col = sky_col;
 
                 return col;
             }
-
-            /*
-            
-            fixed4 frag (v2f i) : SV_Target
-            {
-                _RefractionIndex = 1.33;
-                _Distance = 1.0;
-
-                float3 normal = normalize(i.normal);
-
-                float3 viewDir = normalize(i.rePos - _WorldSpaceCameraPos.xyz); // _WorldSpaceCameraPos … ワールド座標系のカメラの位置
-
-                viewDir = refract( viewDir, normal,1.0 / _RefractionIndex );
-
-                float3 tmp = i.rePos / 10.0 + 0.50;
-                float distance_u = abs(-1.0 -i.rePos.y); // -1.0 … 水底のy座標
-                float length_y = abs(distance_u / viewDir.y); // distance_u … 水面から水底までの距離
-                float3 u_viewDir = viewDir * length_y;
-                float3 water_under_pos = i.rePos + u_viewDir;
-
-                float2 screenUv = float2(0.0,0.0);
-
-                float2 border_left_up = float2(1.0,1.0);
-                float2 border_right_up = float2(-1.0, 1.0);
-
-                float2 border_left_down = float2(1.0, -1.0);
-                float2 border_right_down = float2(-1.0, -1.0);
-
-                if ( water_under_pos.x <= -5.0 )
-                {
-                    float distance_l = abs(-5.0-i.rePos.x);
-                    float length_l = abs(distance_l / viewDir.x);
-                    float3 l_viewDir = viewDir * length_l;
-                    float3 water_left_pos = i.rePos + l_viewDir;
-
-                    float2 water_left_pos_v2 = float2(water_left_pos.x, water_left_pos.z);
-
-                    if( dot(border_left_up, water_left_pos_v2) < 0.0 && dot(border_left_down, water_left_pos_v2) < 0.0 )
-                    {
-
-                        water_left_pos.y = water_left_pos.y * -1.0;
-
-                        screenUv = float2((water_left_pos.y / 10.0 + 0.40)*16.0, (water_left_pos.z / 10.0 + 0.50)*16.0);
-
-                        fixed4 col = tex2D(_WallTex, screenUv);
-                        col *= _Color;
-                        return col;
-                    }
-                }
-
-                if (water_under_pos.x >= 5.0 )
-                {
-                    float distance_l = abs(5.0 - i.rePos.x);
-                    float length_l = abs(distance_l / viewDir.x);
-                    float3 l_viewDir = viewDir * length_l;
-                    float3 water_left_pos = i.rePos + l_viewDir;
-
-                    float2 water_left_pos_v2 = float2(water_left_pos.x, water_left_pos.z);
-
-                    if (dot(border_right_up, water_left_pos_v2) < 0.0 && dot(border_right_down, water_left_pos_v2) < 0.0)
-                    {
-                        water_left_pos.y = water_left_pos.y * -1.0;
-
-                        screenUv = float2((water_left_pos.y / 10.0 + 0.40)*16.0, 1.0-(water_left_pos.z / 10.0 + 0.50)*16.0);
-
-                        fixed4 col = tex2D(_WallTex, screenUv);
-                        col *= _Color;
-                        return col;
-                    }
-                }
-
-                if (water_under_pos.z >= 5.0 )
-                {
-                    float distance_l = abs(5.0 - i.rePos.z);
-                    float length_l = abs(distance_l / viewDir.z);
-                    float3 l_viewDir = viewDir * length_l;
-                    float3 water_left_pos = i.rePos + l_viewDir;
-
-                    screenUv = float2((water_left_pos.x / 10.0 )*16.0,1.0-(water_left_pos.y / 10.0 + 0.50)*16.0 + 0.40);
-
-                    fixed4 col = tex2D(_WallTex, screenUv);
-                    col *= _Color;
-                    return col;
-                }
-
-                if (water_under_pos.z <= -5.0)
-                {
-                    float distance_l = abs(-5.0 - i.rePos.z);
-                    float length_l = abs(distance_l / viewDir.z);
-                    float3 l_viewDir = viewDir * length_l;
-                    float3 water_left_pos = i.rePos + l_viewDir;
-
-                    screenUv = float2(1.0-(water_left_pos.x / 10.0)*16.0, 1.0 - (water_left_pos.y / 10.0 + 0.50)*16.0 + 0.40);
-
-                    fixed4 col = tex2D(_WallTex, screenUv);
-                    col *= _Color;
-                    return col;
-                }
-                
-
-                tmp = water_under_pos;
-
-                float3 water_cam_pos = float3(0.0, 8.50, 0.0);
-                float3 re_viewDir = normalize( water_cam_pos - water_under_pos);
-                float re_length_y = 1.0 / re_viewDir.y;
-                re_viewDir = re_viewDir * re_length_y;
-                float3 water_on_pos = water_under_pos + re_viewDir;
-
-                float4 refractScreenPos = mul(UNITY_MATRIX_VP, float4(water_on_pos, _Shift));
-
-                // float2 screenUv = (refractScreenPos.xy / refractScreenPos.w) * 0.5 + 0.5;
-
-                // 10.0 … 床の広さ    16.0 … 床(Ground)や壁(Wall_0X)のテクスチャはTilingの設定でそれぞれ16を設定している
-                screenUv = float2((water_under_pos.x/10.0*16.0)+0.50, (water_under_pos.z/10 * 16.0)+0.50);
-
-                // screenUv.y = 1.0 - screenUv.y;
-
-                i.uv.x = i.uv.x;
-                i.uv.y = i.uv.y;
-
-                fixed4 col = tex2D(_GroundTex, screenUv);
-
-                // col = tex2D(_MainTex, i.uv);
-
-                // return col;
-
-                // col = tex2Dproj(_GrabTexture, i.worldPos - refractDir4*0.25);
-
-                col *= _Color;
-
-                // col = float4(tmp, 1.0);
-
-                return col;
-
-                ///
-
-                // sample the texture
-                // fixed4 col = tex2D(_GrabTexture, i.worldPos);
-                // apply fog
-                // UNITY_APPLY_FOG(i.fogCoord, col);
-                // col = _Color;
-                // return col;
-
-                ///
-            }
-
-            */
 
             ENDCG
         }
